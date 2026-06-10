@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn/ui semantic tokens mapped to the Ilmi brand palette */
+    --background: 0 0% 100%; /* White */
+    --foreground: 0 0% 20%; /* Carbon #333333 */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+    --primary: 122 43% 52%; /* Core Green #52B955 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 157 41% 37%; /* Forest Green #388567 */
+    --secondary-foreground: 0 0% 100%;
+    --accent: 43 92% 55%; /* Signal Yellow #F6BB25 — CTAs only */
+    --accent-foreground: 0 0% 20%;
+    --muted: 120 12% 96%;
+    --muted-foreground: 0 0% 42%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 120 8% 88%;
+    --input: 120 8% 88%;
+    --ring: 122 43% 52%;
+    --radius: 1rem; /* rounded, approachable */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background font-sans font-medium text-foreground antialiased;
+  }
+  /* Long-form copy drops to Regular for readability */
+  .prose-body p {
+    @apply font-normal;
+  }
+}
+
+@layer components {
+  /* Brand display headings: uppercase, extended, heavy, tight leading. */
+  .display {
+    @apply font-heading font-black uppercase tracking-tight;
+    font-stretch: 125%;
+    line-height: 0.95;
+  }
+  .display-sub {
+    @apply font-heading font-extrabold uppercase tracking-tight;
+    font-stretch: 118%;
+    line-height: 1.05;
+  }
+  /* Arabic snippets: correct face + RTL handled at the element level. */
+  .arabic {
+    @apply font-arabic;
+    direction: rtl;
+    unicode-bidi: isolate;
+  }
+}
