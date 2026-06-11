@@ -1,6 +1,19 @@
+/* Amiri Quran for the Qur'anic ayah on the landing hero */
+@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Brand heading face — Nimbus Sans Extended Black (Archivo Expanded is the
+   fallback via the font-heading stack in tailwind.config.ts). */
+@font-face {
+  font-family: 'Nimbus Sans Extended';
+  src: url('/fonts/nimbus-sans-extd.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 @layer base {
   :root {
@@ -25,6 +38,22 @@
     --input: 120 8% 88%;
     --ring: 122 43% 52%;
     --radius: 1rem; /* rounded, approachable */
+
+    /* ── Landing design-system tokens (ported from Lovable build) ── */
+    --teal: 184 50% 65%; /* #72CBD2 */
+    --teal-foreground: 0 0% 13%;
+    --dark: 0 0% 20%; /* #333333 */
+    --dark-foreground: 0 0% 100%;
+    --emerald: 153 52% 43%; /* #34A576 */
+    --emerald-foreground: 0 0% 100%;
+    --gradient-turquoise: 163 73% 48%;
+    --gradient-green: 132 59% 51%;
+    --gradient-yellow: 51 79% 57%;
+    --gradient-orange: 38 100% 58%;
+    --shadow-sm: 0 2px 8px -2px hsl(0 0% 0% / 0.08);
+    --shadow-md: 0 4px 16px -4px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 8px 32px -8px hsl(0 0% 0% / 0.12);
+    --shadow-glow: 0 6px 24px -4px hsl(121 40% 52% / 0.35);
   }
 }
 
@@ -32,12 +61,24 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background font-sans font-medium text-foreground antialiased;
   }
   /* Long-form copy drops to Regular for readability */
   .prose-body p {
     @apply font-normal;
+  }
+  /* Landing page heading convention (scoped so the portal keeps .display) */
+  .landing h1,
+  .landing h2,
+  .landing h3,
+  .landing h4,
+  .landing h5,
+  .landing h6 {
+    @apply font-heading font-black tracking-tight uppercase;
   }
 }
 
@@ -59,4 +100,129 @@
     direction: rtl;
     unicode-bidi: isolate;
   }
+
+  /* ── Landing component classes (ported 1:1 from Lovable index.css) ── */
+  .gradient-brand {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gradient-turquoise)) 0%,
+      hsl(var(--gradient-green)) 35%,
+      hsl(var(--gradient-yellow)) 70%,
+      hsl(var(--gradient-orange)) 100%
+    );
+  }
+  .gradient-brand-reverse {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gradient-orange)) 0%,
+      hsl(var(--gradient-yellow)) 35%,
+      hsl(var(--gradient-green)) 70%,
+      hsl(var(--gradient-turquoise)) 100%
+    );
+  }
+  .gradient-text {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gradient-turquoise)) 0%,
+      hsl(var(--gradient-green)) 35%,
+      hsl(var(--gradient-yellow)) 70%,
+      hsl(var(--gradient-orange)) 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .gradient-border {
+    position: relative;
+    background: hsl(var(--background));
+    border-radius: var(--radius);
+  }
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 2px;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gradient-turquoise)),
+      hsl(var(--gradient-green)),
+      hsl(var(--gradient-yellow)),
+      hsl(var(--gradient-orange))
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .monogram-overlay {
+    position: relative;
+  }
+  .monogram-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/images/monogram-pattern.png');
+    background-size: 800px;
+    background-repeat: repeat;
+    opacity: 0.14;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Frosted card treatment — scoped to the landing page so portal cards
+     keep their solid backgrounds. */
+  .landing .bg-card {
+    background: hsl(var(--card) / 0.75) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .section-padding {
+    @apply py-16 md:py-24;
+  }
+  .container-narrow {
+    @apply max-w-5xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .animate-pulse-slow {
+    animation: pulse 4s ease-in-out infinite;
+  }
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 8s ease infinite;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
 }

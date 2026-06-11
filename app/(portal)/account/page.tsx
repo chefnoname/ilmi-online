@@ -11,21 +11,20 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Account" };
 
 const STATUS_LABELS: Record<string, { label: string; tone: "green" | "yellow" | "outline" }> = {
-  active: { label: "Premium — Active", tone: "green" },
-  free: { label: "Free Plan", tone: "outline" },
-  past_due: { label: "Payment Past Due", tone: "yellow" },
-  canceled: { label: "Canceled", tone: "outline" },
+  active: { label: "Subscription Active", tone: "green" },
+  trialing: { label: "Trial Active", tone: "yellow" },
+  inactive: { label: "No Subscription", tone: "outline" },
 };
 
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: { saved?: string; activated?: string; upgrade?: string; error?: string };
+  searchParams: { saved?: string; activated?: string; checkout?: string; error?: string };
 }) {
   const { user } = await requireUser();
   const profile = await getProfile();
-  const subscribed = hasActiveSubscription(profile);
-  const status = STATUS_LABELS[profile?.subscription_status ?? "free"] ?? STATUS_LABELS.free;
+  const entitled = hasActiveSubscription(profile);
+  const status = STATUS_LABELS[profile?.subscription_status ?? "inactive"] ?? STATUS_LABELS.inactive;
 
   return (
     <div className="container max-w-2xl space-y-8 py-10">
@@ -36,14 +35,20 @@ export default async function AccountPage({
           Profile saved.
         </p>
       )}
-      {searchParams.activated && (
+      {searchParams.checkout === "success" && (
         <p className="rounded-md bg-brand-green/10 px-4 py-3 text-sm font-semibold text-brand-forest">
-          Subscription activated — the full library is now unlocked. May it be of benefit!
+          Payment received — your access activates as soon as Stripe confirms it (usually
+          seconds). Refresh if you don&apos;t see it yet. May it be of benefit!
         </p>
       )}
-      {searchParams.upgrade && (
+      {searchParams.checkout === "cancelled" && (
         <p className="rounded-md bg-brand-yellow/15 px-4 py-3 text-sm font-semibold text-[#8a6400]">
-          That course requires an active subscription — subscribe below to unlock it.
+          Checkout cancelled — no payment was taken.
+        </p>
+      )}
+      {searchParams.activated === "dev" && (
+        <p className="rounded-md bg-brand-green/10 px-4 py-3 text-sm font-semibold text-brand-forest">
+          Dev mode: subscription activated via DEV_FAKE_CHECKOUT.
         </p>
       )}
       {searchParams.error && (
@@ -67,9 +72,6 @@ export default async function AccountPage({
             <div className="space-y-2">
               <Label>Email</Label>
               <Input value={user.email ?? ""} disabled />
-              <p className="text-xs text-muted-foreground">
-                Email changes are handled through a verification flow — contact support.
-              </p>
             </div>
             <Button type="submit" variant="primary">
               Save Changes
@@ -78,7 +80,7 @@ export default async function AccountPage({
         </CardContent>
       </Card>
 
-      {/* Subscription */}
+      {/* Subscription / billing */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -86,36 +88,43 @@ export default async function AccountPage({
             <Badge variant={status.tone}>{status.label}</Badge>
           </div>
           <CardDescription>
-            {subscribed
-              ? "You have full access to every course and lesson in the library."
-              : "Upgrade to unlock the full course library — £12/month, cancel anytime."}
+            {entitled
+              ? "You have full access to every lesson. Billing is handled securely by Stripe."
+              : "Subscribe to unlock every lesson in the library. Free lessons stay free."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {subscribed ? (
+          {entitled ? (
             <div className="flex items-center gap-3 rounded-md bg-brand-green/10 p-4">
               <BadgeCheck className="h-6 w-6 shrink-0 text-brand-forest" />
               <p className="text-sm">
-                Billing is managed by our payment provider. Use the billing portal to update your
-                card, view invoices or cancel.
+                Use the billing portal to update your card, view invoices, or cancel. Your status
+                here always reflects Stripe — the webhook keeps it in sync.
               </p>
             </div>
           ) : (
             <ul className="space-y-2 text-sm text-brand-carbon/85">
-              <li>• Every course, every lesson, new releases monthly</li>
-              <li>• Progress tracking and continue-watching</li>
-              <li>• Cancel anytime — keep access until period end</li>
+              <li>• Every subject, every lesson, new releases included</li>
+              <li>• Progress tracking across devices</li>
+              <li>• Cancel anytime — access until period end</li>
             </ul>
           )}
-          {/* POST to the server route: auth + status change happen server-side.
-              With DEV_FAKE_CHECKOUT=true this activates instantly (stub);
-              in production it redirects to the payment provider. */}
-          <form action="/api/billing/checkout" method="POST">
-            <Button type="submit" variant={subscribed ? "outline" : "cta"} size="lg">
-              <CreditCard className="h-4 w-4" />
-              {subscribed ? "Manage Billing" : "Subscribe — £12/month"}
-            </Button>
-          </form>
+          {/* POSTs to server routes: auth + Stripe calls happen server-side. */}
+          {entitled ? (
+            <form action="/api/stripe/portal" method="POST">
+              <Button type="submit" variant="outline" size="lg">
+                <CreditCard className="h-4 w-4" />
+                Manage Billing
+              </Button>
+            </form>
+          ) : (
+            <form action="/api/stripe/checkout" method="POST">
+              <Button type="submit" variant="cta" size="lg">
+                <CreditCard className="h-4 w-4" />
+                Subscribe
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

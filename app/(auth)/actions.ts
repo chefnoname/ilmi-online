@@ -23,7 +23,7 @@ export async function signUp(formData: FormData) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) err("/signup", "Enter a valid email address.");
   if (password.length < 8) err("/signup", "Password must be at least 8 characters.");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email,
     password,
@@ -43,7 +43,7 @@ export async function signIn(formData: FormData) {
   // Only allow internal redirect targets (open-redirect protection).
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) err("/login", "Invalid email or password.");
   revalidatePath("/", "layout");
@@ -51,7 +51,7 @@ export async function signIn(formData: FormData) {
 }
 
 export async function signOut() {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/");
@@ -59,7 +59,7 @@ export async function signOut() {
 
 export async function requestPasswordReset(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const supabase = createClient();
+  const supabase = await createClient();
   // Always show success — do not reveal whether the email exists.
   await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${SITE_URL}/auth/callback?next=/reset-password`,
@@ -71,7 +71,7 @@ export async function updatePassword(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   if (password.length < 8) err("/reset-password", "Password must be at least 8 characters.");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   // Requires the recovery session established by /auth/callback.
   const {
     data: { user },

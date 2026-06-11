@@ -9,7 +9,7 @@ import type { Profile } from "@/lib/types";
  * app layer (and RLS is the enforcement on the data layer).
  */
 export async function requireUser() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -18,7 +18,7 @@ export async function requireUser() {
 }
 
 export async function getProfile(): Promise<Profile | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -29,6 +29,13 @@ export async function getProfile(): Promise<Profile | null> {
   return data as Profile | null;
 }
 
+/**
+ * Video entitlement: 'trialing' counts as entitled (Stripe trial = valid
+ * subscription). Mirrors public.has_active_subscription() in the database
+ * and isEntitled() in lib/mux.ts.
+ */
 export function hasActiveSubscription(profile: Profile | null) {
-  return profile?.subscription_status === "active";
+  return (
+    profile?.subscription_status === "active" || profile?.subscription_status === "trialing"
+  );
 }

@@ -12,8 +12,8 @@ const config: Config = {
   theme: {
     container: {
       center: true,
-      padding: "1.5rem",
-      screens: { "2xl": "1200px" },
+      padding: "2rem",
+      screens: { "2xl": "1400px" },
     },
     extend: {
       colors: {
@@ -25,6 +25,10 @@ const config: Config = {
           aqua: "#72CBD2", // Accent 3 — gradient tone
           teal: "#34A576", // Accent 4 — gradient tone
         },
+        // Landing design-system tokens (ported from Lovable build)
+        teal: { DEFAULT: "hsl(var(--teal))", foreground: "hsl(var(--teal-foreground))" },
+        dark: { DEFAULT: "hsl(var(--dark))", foreground: "hsl(var(--dark-foreground))" },
+        emerald: { DEFAULT: "hsl(var(--emerald))", foreground: "hsl(var(--emerald-foreground))" },
         // shadcn/ui semantic tokens (mapped to brand in globals.css)
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -40,8 +44,9 @@ const config: Config = {
         popover: { DEFAULT: "hsl(var(--popover))", foreground: "hsl(var(--popover-foreground))" },
       },
       fontFamily: {
-        // Headings: wide, heavy extended sans (Archivo Expanded, 800/900)
-        heading: ["var(--font-heading)", "system-ui", "sans-serif"],
+        // Headings: Nimbus Sans Extended Black (self-hosted), falling back
+        // to Archivo Expanded (next/font variable --font-heading)
+        heading: ['"Nimbus Sans Extended"', "var(--font-heading)", "Impact", "Arial Black", "system-ui", "sans-serif"],
         // Body/UI: Inter
         sans: ["var(--font-body)", "system-ui", "sans-serif"],
         // Arabic: clean Kufic-leaning Arabic face, with system fallbacks

@@ -1,8 +1,6 @@
 /** Database row types (hand-written; replace with `supabase gen types` later). */
 
-export type SubscriptionStatus = "free" | "active" | "past_due" | "canceled";
-export type CourseTier = "free" | "paid";
-export type CourseGradient = "warm" | "cool" | "deep";
+export type SubscriptionStatus = "active" | "inactive" | "trialing";
 
 export interface Profile {
   id: string;
@@ -10,50 +8,44 @@ export interface Profile {
   avatar_url: string | null;
   subscription_status: SubscriptionStatus;
   billing_customer_id: string | null;
+  stripe_subscription_id: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface Course {
+export interface Subject {
   id: string;
-  slug: string;
   title: string;
-  tagline: string;
-  description: string;
-  scholar_name: string;
-  scholar_title: string;
-  tier: CourseTier;
-  gradient: CourseGradient;
-  is_published: boolean;
-  position: number;
+  slug: string;
+  sort_order: number;
   created_at: string;
 }
 
 export interface Lesson {
   id: string;
-  course_id: string;
-  slug: string;
+  subject_id: string;
   title: string;
-  description: string;
-  video_url: string;
-  duration_minutes: number;
-  position: number;
-  is_preview: boolean;
+  lesson_number: number;
+  mux_playback_id: string | null;
+  thumbnail_url: string | null;
+  is_free: boolean;
+  sort_order: number;
   created_at: string;
 }
 
-export interface Enrollment {
-  id: string;
-  user_id: string;
-  course_id: string;
-  enrolled_at: string;
-}
-
-export interface LessonProgress {
+export interface Progress {
   id: string;
   user_id: string;
   lesson_id: string;
   completed: boolean;
-  last_position_seconds: number;
-  updated_at: string;
+  last_watched_at: string;
+}
+
+export interface Benefit {
+  id: string;
+  lesson_id: string;
+  user_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
 }

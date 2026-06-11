@@ -11,7 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import "dotenv/config";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !serviceKey) {
   console.error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env");
   process.exit(1);
@@ -23,7 +23,7 @@ const admin = createClient(url, serviceKey, {
 });
 
 const USERS = [
-  { email: "student-free@test.ilmi.online", name: "Amina Free", status: "free" },
+  { email: "student-free@test.ilmi.online", name: "Amina Free", status: "inactive" },
   { email: "student-paid@test.ilmi.online", name: "Bilal Paid", status: "active" },
 ];
 

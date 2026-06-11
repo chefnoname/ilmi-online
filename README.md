@@ -1,64 +1,47 @@
 # Ilmi Online
 
 Islamic education subscription platform — Next.js 14 (App Router) + TypeScript +
-Tailwind + shadcn/ui + Supabase (Auth, Postgres, RLS).
+Tailwind + shadcn/ui + Supabase (Auth, Postgres, RLS) + Mux (signed video) + Stripe.
 
-## Quick start
-
-```bash
-npm install
-cp .env.example .env.local        # fill in your Supabase project values
-
-# Database (Supabase CLI, linked project or local stack):
-supabase db reset                  # applies supabase/migrations + supabase/seed.sql
-npm run seed:users                 # creates the two RLS test users (needs service key)
-
-npm run dev
-```
-
-Log in as `student-paid@test.ilmi.online` / `IlmiTest!2026` to see the full
-Premium experience, or `student-free@test.ilmi.online` to see gating. With
-`DEV_FAKE_CHECKOUT=true`, the Subscribe button on `/account` activates the
-subscription instantly (dev stub — see `lib/payments/`).
+**Start here → `SETUP.md`** (database, Mux playback IDs, Stripe wiring).
+**Before deploying → `SECURITY.md`** (RLS reference + test checklist).
 
 ## Structure
 
 ```
 app/
-  (marketing)/        # public: landing, /courses, /courses/[slug], /about, /faq
-  (auth)/             # /login /signup /forgot-password /reset-password /verify-email + actions
-  (portal)/           # authed: /dashboard, course + lesson player, /account + actions
-  auth/callback/      # email verification / recovery code exchange
-  api/billing/        # checkout stub (Stripe goes here later)
+  page.tsx              # public landing (ported 1:1 from the live Lovable build)
+  (auth)/               # /login /signup /forgot-password /reset-password /verify-email
+  (portal)/             # authed: /dashboard (Box Promo + subject rails),
+                        #   /dashboard/lessons/[id] (Mux player), /account (billing)
+  api/mux/playback-token/   # THE gate for paid video — mints signed Mux JWTs
+  api/stripe/           # checkout, webhook (source of truth), billing portal
+  auth/callback/        # email verification / recovery code exchange
 components/
-  ui/                 # shadcn-style primitives themed to the brand
-  site/               # navbar, footer, hero pieces, Kufic pattern, course card
+  landing/              # ported Lovable components (+ their ui primitives)
+  portal/               # box-promo, lesson-card, lesson-player
+  ui/                   # brand-themed shadcn primitives (portal/auth)
+  site/                 # kufic-pattern, wordmark
 lib/
-  supabase/           # client (anon), server (anon+cookies), admin (service, server-only)
-  auth.ts             # requireUser / getProfile / hasActiveSubscription
-  payments/           # PaymentProvider interface + stub
-  fonts.ts            # Archivo (expanded), Inter, Noto Kufi Arabic
+  supabase/             # client (anon) / server (anon+cookies) / admin (secret, server-only)
+  auth.ts mux.ts stripe.ts config.ts
 supabase/
-  migrations/         # schema + RLS (read SECURITY.md alongside)
-  seed.sql            # catalog seed
-middleware.ts          # session refresh + server-side route protection
+  migrations/           # 0001 base + 0002 portal model (subjects/lessons/progress)
+  seed.sql              # Aqeedah + Fiqh curriculum
+middleware.ts            # session refresh + server-side route protection
 ```
 
-## Brand system
+## Data model
 
-Implemented as Tailwind tokens (`tailwind.config.ts`):
+`subjects` → `lessons` (lesson_number, mux_playback_id, thumbnail_url, is_free) ·
+`profiles.subscription_status` (`active | inactive | trialing`, written only by the
+Stripe webhook) · `progress` (per-user, RLS-isolated).
 
-- Colours: `brand.green` #52B955 · `brand.forest` #388567 · `brand.yellow` #F6BB25
-  (CTAs/highlights only) · `brand.carbon` #333333 · `brand.aqua` #72CBD2 · `brand.teal` #34A576
-- Gradients: `bg-brand-warm` (green→yellow), `bg-brand-cool` (teal→aqua), `bg-brand-deep`
-- Type: `.display` / `.display-sub` → Archivo (variable wdth, rendered expanded,
-  800/900, uppercase, tight leading); body is Inter Medium (`font-sans`); Arabic uses
-  `.arabic` (Noto Kufi Arabic, RTL-isolated)
-- Texture: `<KuficPattern />` — faint square-Kufic SVG used on heroes/dividers
-- Buttons: pill radius; `variant="cta"` is the yellow CTA — keep it scarce
+## Brand
 
-## Security
-
-Read **SECURITY.md** before deploying — it documents every RLS policy, the
-User-A-vs-User-B test matrix, and the go-live checklist.
-# ilmi-online
+Tailwind tokens in `tailwind.config.ts`: brand colours (#52B955 / #388567 /
+#F6BB25 / #333333 / #72CBD2 / #34A576), `bg-brand-warm|cool|deep` gradients,
+`.display` headings (Nimbus Sans Extended, Archivo Expanded fallback), Kufic
+pattern texture, pill yellow CTAs. The landing page additionally ships the
+Lovable design-system classes (`gradient-brand`, `gradient-text`,
+`monogram-overlay`, `section-padding`) scoped to coexist with the portal.
