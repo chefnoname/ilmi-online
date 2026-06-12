@@ -13,8 +13,14 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      // Analytics: magic-link / verified-email sign-ins also count.
+      if (data?.user) {
+        await supabase.from("sign_in_events").insert({ user_id: data.user.id });
+      }
+      return NextResponse.redirect(`${origin}${next}`);
+    }
   }
   return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Link is invalid or expired.")}`);
 }

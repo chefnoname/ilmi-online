@@ -44,8 +44,13 @@ export async function signIn(formData: FormData) {
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) err("/login", "Invalid email or password.");
+  // Analytics: one sign_in_events row per successful sign-in (RLS: the row's
+  // user_id must be the just-signed-in caller). Failure is non-fatal.
+  if (data?.user) {
+    await supabase.from("sign_in_events").insert({ user_id: data.user.id });
+  }
   revalidatePath("/", "layout");
   redirect(next);
 }

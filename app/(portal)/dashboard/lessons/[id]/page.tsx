@@ -31,6 +31,8 @@ export default async function LessonPage({ params }: { params: { id: string } })
     .maybeSingle();
   if (!lessonData) notFound();
   const lesson = lessonData as Lesson;
+  // Archived lessons are hidden from students (admin console can restore).
+  if (lesson.is_archived) notFound();
 
   const [
     { data: subjectData },
@@ -44,6 +46,7 @@ export default async function LessonPage({ params }: { params: { id: string } })
       .from("lessons")
       .select("*")
       .eq("subject_id", lesson.subject_id)
+      .eq("is_archived", false) // archived lessons never appear in playlists
       .order("lesson_number"),
     supabase.from("progress").select("*"), // own rows only (RLS)
     supabase
@@ -85,6 +88,7 @@ export default async function LessonPage({ params }: { params: { id: string } })
                 title: lesson.title,
                 lesson_number: lesson.lesson_number,
                 mux_playback_id: lesson.mux_playback_id,
+                mux_playback_policy: lesson.mux_playback_policy,
               }}
               subjectTitle={subject.title}
               prev={prev ? { id: prev.id, title: prev.title } : null}

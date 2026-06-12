@@ -2,21 +2,21 @@ import Link from "next/link";
 import { PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KuficPattern } from "@/components/site/kufic-pattern";
-import type { Lesson, Subject } from "@/lib/types";
+import type { Subject } from "@/lib/types";
 
 /**
  * "Box Promo" — the dashboard's featured hero card. A quick-link into one
- * subject (configurable via NEXT_PUBLIC_FEATURED_SUBJECT_SLUG, defaults to
- * Aqeedah — see lib/config.ts). On-brand: warm green→yellow gradient, faint
+ * subject (configurable via NEXT_PUBLIC_FEATURED_SUBJECT_SLUG, defaults to Usul Thalatha
+ * — see lib/config.ts). On-brand: warm green→yellow gradient, faint
  * Kufic texture, uppercase extended heading, yellow pill CTA.
  */
 export function BoxPromo({
   subject,
-  firstLesson,
+  firstLessonId,
   lessonCount,
 }: {
   subject: Subject;
-  firstLesson: Lesson | null;
+  firstLessonId: string | null;
   lessonCount: number;
 }) {
   return (
@@ -35,7 +35,7 @@ export function BoxPromo({
         </p>
         <Button asChild variant="cta" size="lg" className="mt-2">
           <Link
-            href={firstLesson ? `/dashboard/lessons/${firstLesson.id}` : `/dashboard#subject-${subject.slug}`}
+            href={firstLessonId ? `/dashboard/lessons/${firstLessonId}` : `/dashboard#subject-${subject.slug}`}
           >
             <PlayCircle className="h-5 w-5" />
             Start with {subject.title}

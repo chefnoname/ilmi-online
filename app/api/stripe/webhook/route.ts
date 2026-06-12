@@ -48,13 +48,27 @@ export async function POST(request: Request) {
       stripe_subscription_id: sub.id,
     };
 
-    // Prefer the explicit user binding; fall back to the stored customer id.
-    const query = admin.from("profiles").update(update);
-    const { error, count } = userId
-      ? await query.eq("id", userId)
-      : await query.eq("billing_customer_id", customerId);
+    // Resolve the profile (explicit user binding first, then customer id)
+    // so the change can be logged with its previous status.
+    const lookup = admin.from("profiles").select("id, subscription_status");
+    const { data: existing } = userId
+      ? await lookup.eq("id", userId).maybeSingle()
+      : await lookup.eq("billing_customer_id", customerId).maybeSingle();
+    if (!existing) return 0;
+
+    const { error } = await admin.from("profiles").update(update).eq("id", existing.id);
     if (error) throw new Error(error.message);
-    return count;
+
+    // Analytics trail: log every status change (source 'stripe').
+    if (existing.subscription_status !== status) {
+      await admin.from("subscription_events").insert({
+        user_id: existing.id,
+        old_status: existing.subscription_status,
+        new_status: status,
+        source: "stripe",
+      });
+    }
+    return 1;
   }
 
   try {

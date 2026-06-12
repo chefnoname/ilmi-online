@@ -3,7 +3,7 @@ import { fontArabic, fontBody, fontHeading } from "@/lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Ilmi Online — Get Serious About the Deen", template: "%s · Ilmi Online" },
+  title: { default: "ilmi online", template: "%s · Ilmi Online" },
   description:
     "Structured Islamic education taught by qualified scholars. Fiqh, seerah, Arabic and more — one subscription, learn anywhere.",
 };

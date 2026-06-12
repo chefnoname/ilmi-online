@@ -34,7 +34,13 @@ export function LessonMain({
   completed,
   benefits,
 }: {
-  lesson: { id: string; title: string; lesson_number: number; mux_playback_id: string | null };
+  lesson: {
+    id: string;
+    title: string;
+    lesson_number: number;
+    mux_playback_id: string | null;
+    mux_playback_policy: "public" | "signed";
+  };
   subjectTitle: string;
   prev: LessonNav | null;
   next: LessonNav | null;
@@ -47,9 +53,12 @@ export function LessonMain({
   const [error, setError] = useState<string | null>(null);
   const startedRef = useRef(false);
 
-  // ── Signed playback tokens (existing flow — server is the gate) ──
+  const isPublic = lesson.mux_playback_policy === "public";
+
+  // ── Signed playback tokens (server is the gate). Public-policy assets
+  // stream straight from the playback ID — no token fetch at all. ──
   useEffect(() => {
-    if (!lesson.mux_playback_id) return;
+    if (!lesson.mux_playback_id || isPublic) return;
     let cancelled = false;
     (async () => {
       try {
@@ -69,7 +78,7 @@ export function LessonMain({
     return () => {
       cancelled = true;
     };
-  }, [lesson.id, lesson.mux_playback_id]);
+  }, [lesson.id, lesson.mux_playback_id, isPublic]);
 
   /** Used by the Add-timestamp button. */
   function currentPlayheadSeconds() {
@@ -93,11 +102,12 @@ export function LessonMain({
           <div className="flex aspect-video w-full items-center justify-center p-8 text-center text-sm text-white/80">
             {error}
           </div>
-        ) : lesson.mux_playback_id && data ? (
+        ) : lesson.mux_playback_id && (isPublic || data) ? (
           <MuxPlayer
             ref={playerRef}
-            playbackId={data.playbackId}
-            tokens={data.tokens}
+            playbackId={lesson.mux_playback_id}
+            // 'signed' assets require the short-lived JWTs; 'public' must not send any
+            tokens={isPublic ? undefined : data!.tokens}
             metadata={{ video_title: lesson.title }}
             streamType="on-demand"
             accentColor="#52B955"

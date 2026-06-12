@@ -10,7 +10,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * This is the first gate, not the only one: pages re-verify the user in
  * server components, and the database enforces RLS regardless.
  */
-const PROTECTED_PREFIXES = ["/dashboard", "/account"];
+const PROTECTED_PREFIXES = ["/dashboard", "/account", "/admin"];
 const AUTH_PAGES = ["/login", "/signup", "/forgot-password"];
 
 export async function middleware(request: NextRequest) {
@@ -43,6 +43,23 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  // /admin requires role = 'admin' (own profile row is readable under RLS).
+  // Non-admins are redirected BEFORE any admin code or data loads; the admin
+  // layout + every admin action/route re-verify with requireAdmin().
+  if (user && pathname.startsWith("/admin")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    if (profile?.role !== "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
 
   if (!user && PROTECTED_PREFIXES.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone();

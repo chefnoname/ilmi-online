@@ -24,7 +24,20 @@ export async function POST(request: Request) {
   if (!process.env.STRIPE_SECRET_KEY) {
     if (process.env.DEV_FAKE_CHECKOUT === "true" && process.env.NODE_ENV !== "production") {
       const admin = createAdminClient();
+      const { data: prev } = await admin
+        .from("profiles")
+        .select("subscription_status")
+        .eq("id", user.id)
+        .single();
       await admin.from("profiles").update({ subscription_status: "active" }).eq("id", user.id);
+      if (prev && prev.subscription_status !== "active") {
+        await admin.from("subscription_events").insert({
+          user_id: user.id,
+          old_status: prev.subscription_status,
+          new_status: "active",
+          source: "admin", // dev stub counts as an admin-side change
+        });
+      }
       return NextResponse.redirect(new URL("/account?activated=dev", request.url), 303);
     }
     return NextResponse.json({ error: "Stripe is not configured (STRIPE_SECRET_KEY)" }, { status: 501 });

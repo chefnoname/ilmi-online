@@ -42,9 +42,19 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (!lessonData) return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
   const lesson = lessonData as Lesson;
+  // Archived lessons are inaccessible to students — no tokens, ever.
+  if (lesson.is_archived) {
+    return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
+  }
 
   if (!lesson.mux_playback_id) {
     return NextResponse.json({ error: "Video not yet available" }, { status: 409 });
+  }
+
+  // Public-policy assets stream without a token — the player should not
+  // call this route for them, but answer correctly if it does.
+  if (lesson.mux_playback_policy === "public") {
+    return NextResponse.json({ playbackId: lesson.mux_playback_id, tokens: null });
   }
 
   // 4. AuthZ — entitlement check (RLS lets users read only their own profile).

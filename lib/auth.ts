@@ -36,6 +36,45 @@ export async function getProfile(): Promise<Profile | null> {
  */
 export function hasActiveSubscription(profile: Profile | null) {
   return (
-    profile?.subscription_status === "active" || profile?.subscription_status === "trialing"
+    profile?.subscription_status === "active" ||
+    profile?.subscription_status === "trialing" ||
+    profile?.subscription_status === "comped" // admin-granted free access
   );
+}
+
+/**
+ * Admin gate for pages/layouts/server actions. Redirects non-admins BEFORE
+ * any admin data or UI is produced. Middleware performs the same check
+ * earlier; this is the authoritative second layer.
+ */
+export async function requireAdmin() {
+  const { supabase, user } = await requireUser();
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  const profile = data as Profile | null;
+  if (profile?.role !== "admin") redirect("/dashboard");
+  return { supabase, user, profile: profile as Profile };
+}
+
+/**
+ * Admin gate for API route handlers (returns null instead of redirecting —
+ * caller responds 403). Same checks as requireAdmin.
+ */
+export async function getAdminUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  const profile = data as Profile | null;
+  if (profile?.role !== "admin") return null;
+  return { supabase, user, profile };
 }

@@ -23,11 +23,14 @@ never the UI. Three layers, in order of authority:
 - `profiles: update own` — own row only, AND the `protect_billing_columns` trigger raises an exception if `subscription_status`, `billing_customer_id`, or `stripe_subscription_id` change outside the service role. **Users cannot self-upgrade.**
 - No INSERT (auth trigger creates rows) / no DELETE policies.
 
-### subjects (0002)
-- `subjects: authenticated read` — catalog metadata for signed-in students. No anon read, no write policies (managed via Studio/service role).
+### topics / subjects / lessons (0004 — three-level hierarchy)
+- `topics|subjects|lessons: authenticated read` — catalog metadata for any signed-in user. No anon read.
+- `topics|subjects|lessons: admin insert/update/delete` — writes require `is_admin()`, a SECURITY DEFINER function checking `profiles.role = 'admin'` for `auth.uid()`. Students (`role = 'student'`) are **read-only** on all content tables. Groundwork for the future admin console; no admin UI exists yet.
+- `profiles.role` is locked by the same trigger as billing columns (`protect_billing_columns`): a user updating their own profile **cannot** set `role = 'admin'` — only the service role or Studio (postgres) can. Set your own role to admin manually in Studio for testing.
 
-### lessons (0002)
-- `lessons: authenticated read` — any signed-in user can read lesson metadata **including `mux_playback_id`**. That is intentional and safe: all assets use Mux's *signed* playback policy, so a playback ID without a server-minted JWT cannot stream anything. The real gate is `/api/mux/playback-token`, which checks `is_free` OR `subscription_status in ('active','trialing')` before signing 1-hour tokens.
+### lessons — playback policy (0004)
+- `mux_playback_policy = 'signed'` (default): the playback ID alone cannot stream — the real gate is `/api/mux/playback-token`, which checks `is_free` OR `subscription_status in ('active','trialing')` before signing 1-hour tokens.
+- `mux_playback_policy = 'public'`: the asset streams without a token (use only for intentionally public previews/free content — anyone with the playback ID can watch). The player skips the token route for these; the route also answers public lessons without minting tokens.
 
 ### benefits (0003)
 - `benefits: authenticated read` — any signed-in student can read a lesson's benefits (comments).
@@ -38,6 +41,34 @@ never the UI. Three layers, in order of authority:
 ### progress (0002)
 - `read/update/delete own` — `user_id = auth.uid()`; User A cannot read or write User B's progress.
 - `insert own` — `user_id` forced to the caller; the referenced lesson must exist and be visible under the lessons policy.
+
+## Admin console (/admin)
+
+Gating — three layers, all server-side:
+1. **Middleware**: any `/admin` request by a non-admin (or anonymous) user is redirected before any admin code runs (own-profile `role` lookup under RLS).
+2. **`requireAdmin()`**: runs in the admin layout, every admin page, and EVERY admin server action — the authoritative check.
+3. **Database**: content writes additionally go through the admin's own session, so the 0004 admin-only RLS policies enforce them a third time. Service-role is used only where RLS must be bypassed (auth listing, other users' profiles, event logs).
+
+Admin server routes/actions (all begin with `requireAdmin()` / signature verification; service-role never reaches the browser):
+
+| Operation | Where | Elevated power |
+|---|---|---|
+| List students (auth + profiles) | `app/admin/students/page.tsx` | service role |
+| Send password reset / magic link | `app/admin/students/actions.ts` | service role (email only — passwords are hashed and can never be read or set) |
+| Grant 'comped' / revoke access | `app/admin/students/actions.ts` | service role + `subscription_events` log (source 'admin') |
+| Analytics reads | `app/admin/analytics/page.tsx` | service role (read-only) |
+| Content CRUD / reorder / archive | `app/admin/upload/actions.ts` | admin session + RLS (no service role) |
+| Mux direct-upload URL | `app/admin/upload/actions.ts` → `lib/mux.ts` | Mux management keys (server-only) |
+| Mux asset listing (mismatch report) | `app/admin/upload/page.tsx` | Mux management keys |
+| Mux webhook (`video.asset.ready/errored`) | `app/api/mux/webhook/route.ts` | HMAC signature verified (MUX_WEBHOOK_SECRET, constant-time, 5-min replay window) before any write; service role after |
+
+'comped' status: admin-granted free access. Content gates (`has_active_subscription()` SQL, `isEntitled()`, `hasActiveSubscription()`) treat `active | trialing | comped` as entitled; analytics count ONLY 'active' as paying.
+
+### New RLS policies (0005)
+- `sign_in_events: insert own` — the auth flow logs each successful sign-in as the signed-in user; `admin read` — only admins read; nobody updates/deletes.
+- `subscription_events: admin read` — read-only for admins; NO insert policies: only service-role code (Stripe webhook → source 'stripe', admin actions → source 'admin') writes.
+- `app_settings: authenticated read` — students read the Box Promo target on dashboard load; `admin update` — only admins change it; single row enforced by the schema.
+- `lessons.is_archived` — archived lessons are excluded from the student dashboard, playlists, lesson page (404) and the Mux token route (404); they remain visible/restorable in the admin console. Mux assets are never auto-deleted.
 
 ## Subscription state (Stripe is the source of truth)
 
@@ -74,7 +105,16 @@ update profiles set subscription_status = 'active' where id = '<FREE_USER_UUID>'
 -- 6. cannot post a benefit as someone else: RLS violation
 insert into benefits (user_id, lesson_id, body)
 values ('<PAID_USER_UUID>', (select id from lessons limit 1), 'spoof');
+-- 7. content tables are write-locked for students: all must fail (RLS)
+insert into topics (title, slug, sort_order) values ('Hack', 'hack', 99);
+update lessons set title = 'defaced' where lesson_number = 1;
+delete from subjects;
+-- 8. cannot self-promote to admin: trigger exception
+update profiles set role = 'admin' where id = '<FREE_USER_UUID>';
 ```
+
+After manually setting your own profile's `role = 'admin'` in Studio, repeat
+step 7 as your admin user — inserts/updates/deletes must then succeed.
 
 ### B. Non-subscriber cannot get a Mux token for a paid lesson
 
@@ -102,3 +142,7 @@ values ('<PAID_USER_UUID>', (select id from lessons limit 1), 'spoof');
 - [ ] Anonymous `/dashboard` and `/account` requests redirect to `/login` (curl, not just browser)
 - [ ] Landing page (`app/page.tsx` + `components/landing/`) imports no Supabase code
 - [ ] Test users removed or passwords rotated
+- [ ] As a STUDENT: every `/admin` URL redirects to /dashboard (curl with student cookies, not just UI)
+- [ ] As a student: calling an admin server action directly returns a redirect, not data
+- [ ] Mux webhook with a bad/missing `mux-signature` returns 400 and writes nothing
+- [ ] Archived lesson: student gets 404 on the page AND on the token route
